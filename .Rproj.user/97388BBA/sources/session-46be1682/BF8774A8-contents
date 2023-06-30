@@ -1,0 +1,177 @@
+library(readxl)
+df_lebron = data.frame(read_excel("project/Lebron_playoffs.xlsx"))
+df_jordan = data.frame(read_excel("project/Jordan_playoffs.xlsx"))
+
+colnames(df_jordan) <- gsub("^X", "", colnames(df_jordan))
+colnames(df_lebron) <- gsub("^X", "", colnames(df_lebron))
+df_jordan$Location <- ifelse(is.na(df_jordan$Location), "H", df_jordan$Location)
+df_lebron$Location <- ifelse(is.na(df_lebron$Location), "H", df_lebron$Location)
+
+library(tidyr)
+df_jordan <- separate(df_jordan, col = Result, into = c("Outcome", "Score"), sep = "\\s*\\(|\\)\\s*")
+df_lebron <- separate(df_lebron, col = Result, into = c("Outcome", "Score"), sep = "\\s*\\(|\\)\\s*")
+
+
+df_jordan$Score <- as.integer(gsub("[+]", "", df_jordan$Score))
+df_lebron$Score <- as.integer(gsub("[+]", "", df_lebron$Score))
+
+
+
+
+
+
+
+jordan_wins = sum(df_jordan$Outcome== "W")
+jordan_losses = sum(df_jordan$Outcome== "L")
+
+lebron_wins = sum(df_lebron$Outcome== "W")
+lebron_losses = sum(df_lebron$Outcome== "L")
+
+
+labels_jordan <- c(paste("Wins (", jordan_wins, ")"), paste("Losses (", jordan_losses, ")"))
+values_jordan <- c(jordan_wins, jordan_losses)
+labels_lebron <- c(paste("Wins (", lebron_wins, ")"), paste("Losses (", lebron_losses, ")"))
+values_lebron <- c(lebron_wins, lebron_losses)
+
+
+pie(values_jordan, labels = labels_jordan, main = "Michael Jordan Games Won and Lost")
+pie(values_lebron, labels = labels_lebron, main = "LeBron James Games Won and Lost")
+
+lebron_total_games <- nrow(df_lebron)
+jordan_total_games <- nrow(df_jordan)
+
+total_games <- c(jordan_total_games, lebron_total_games)
+
+
+barplot(total_games, names.arg = c("Michael Jordan", "LeBron James"), xlab = "Player", ylab = "Total Games Played", 
+        col = c("red", "gold"), main = "Total Playoff Games Played")
+
+
+
+
+jordan_points <- sum(df_jordan$PTS)
+lebron_points <- sum(df_lebron$PTS)
+
+barplot(c(jordan_points, lebron_points), 
+        main = "Total Playoff Points", 
+        xlab = "Player", 
+        ylab = "Points",
+        names.arg = c("Jordan", "LeBron"), 
+        col = c("red", "gold"))
+
+library(ggplot2)
+library(dplyr)
+
+score_org_jordan = df_jordan[order(df_jordan$GmSc, decreasing=TRUE, na.last=FALSE),]
+score_org_jordan = data.frame(GmSc_jor = score_org_jordan$GmSc)
+
+score_org_lebron = df_lebron[order(df_lebron$GmSc, decreasing=TRUE, na.last=FALSE),]
+score_org_lebron = data.frame(GmSc_leb = score_org_lebron$GmSc)
+
+
+score_org_combined = data.frame(GmSc_jor = score_org_jordan[1:50,], GmSc_leb = score_org_lebron[1:50,])
+
+score_org_combined$nrow <- 1:nrow(score_org_combined)
+print(score_org_combined)
+
+ggplot(score_org_combined, aes(x=nrow)) + 
+  geom_line(aes(y = GmSc_jor), color = "red", size = 1.5) + 
+  geom_line(aes(y = GmSc_leb), color="purple", size = 1.5) + 
+  geom_point(aes(y = GmSc_jor), color = "black", size = 1) +
+  geom_point(aes(y = GmSc_leb), color="gold", size = 1) +
+  labs(x = "Game (in descending order)", y = "Game Score") + 
+  ggtitle("Top 50 Game Score's")
+
+
+
+#Q1
+
+mean(df_jordan$GmSc)
+mean(df_lebron$GmSc)
+
+
+reg_jordan = lm(Score ~ GmSc, data = df_jordan)
+reg_lebron = lm(Score ~ GmSc, data = df_lebron)
+
+
+plot(Score ~ GmSc, data = df_jordan, main = "Jordan")
+axis(side = 1, at = c(0, 10, 20, 30, 40, 50))
+axis(side = 2, at = c(-40, -20, 0, 20, 40))
+abline(reg_jordan)
+
+
+
+plot(Score ~ GmSc, data = df_lebron, main = "LeBron")
+axis(side = 1, at = c(0, 10, 20, 30, 40, 50))
+axis(side = 2, at = c(-40, -20, 0, 20, 40))
+abline(reg_lebron)
+
+reg_jordan$coef
+
+reg_lebron$coef
+
+plot(reg_jordan)
+plot(reg_lebron)
+
+cor.test(df_jordan$GmSc, df_jordan$Score)
+cor.test(df_lebron$GmSc, df_lebron$Score)
+
+summary(reg_jordan)
+
+summary(reg_lebron)
+
+
+
+variance_lebron <- var(df_lebron$GmSc)
+variance_jordan <- var(df_jordan$GmSc)
+print(variance_lebron)
+print(variance_jordan)
+
+
+
+df_jordan$player <- "Jordan"
+df_lebron$player <- "LeBron"
+
+df_combined <- rbind(df_jordan, df_lebron)
+
+summary(aov(Score ~ GmSc*player, data = df_combined))
+
+
+
+
+
+#Q2
+
+hist(df_jordan$PTS, main="Jordan's Points per Game", xlab="Points", breaks = seq(0, 70, by = 10), col = "red")
+summary(df_jordan$PTS)
+hist(df_lebron$PTS, main="LeBron's Points per Game", xlab="Points", breaks = seq(0, 70, by = 10), col = "gold")
+summary(df_lebron$PTS)
+
+summary(df_jordan$PTS)
+summary(df_lebron$PTS)
+
+qqnorm(df_jordan$PTS)
+qqnorm(df_lebron$PTS)
+
+var(df_lebron$PTS)
+var(df_jordan$PTS)
+
+t.test(df_lebron$PTS, df_jordan$PTS)
+t.test(df_lebron$FG_Percent, df_jordan$FG_Percent)
+
+
+#Q3
+lebron_home <- df_lebron[df_lebron$Location == "H",]
+lebron_away <- df_lebron[df_lebron$Location == "A",]
+jordan_home <- df_jordan[df_jordan$Location == "H",]
+jordan_away <- df_jordan[df_jordan$Location == "A",]
+
+qqnorm(jordan_home$PTS, main = "Jordan home")
+qqnorm(jordan_away$PTS, main = "Jordan away")
+qqnorm(lebron_home$PTS, main = "LeBron home")
+qqnorm(lebron_away$PTS, main = "LeBron away")
+
+
+var.test(lebron_home$PTS, lebron_away$PTS)
+var.test(jordan_home$PTS, jordan_away$PTS)
+
